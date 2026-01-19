@@ -1,6 +1,7 @@
 import requests
 import os
-import sys
+import json
+from pathlib import Path
 
 BASE_URL = os.getenv("CANVAS_BASE_URL")
 TOKEN = os.getenv("CANVAS_TOKEN")
@@ -9,13 +10,21 @@ TG_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TG_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 HEADERS = {"Authorization": f"Bearer {TOKEN}"}
+SEEN_FILE = Path("seen_quizzes.json")
 
 def send_telegram(msg: str):
+    if not TG_TOKEN or not TG_CHAT_ID:
+        return
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-    requests.post(url, data={
-        "chat_id": TG_CHAT_ID,
-        "text": msg
-    })
+    requests.post(url, data={"chat_id": TG_CHAT_ID, "text": msg})
+
+def load_seen():
+    if SEEN_FILE.exists():
+        return set(json.loads(SEEN_FILE.read_text()))
+    return set()
+
+def save_seen(seen):
+    SEEN_FILE.write_text(json.dumps(list(seen)))
 
 def get_courses():
     r = requests.get(f"{BASE_URL}/api/v1/courses", headers=HEADERS)
@@ -33,22 +42,25 @@ def get_quizzes(course_id):
     return r.json()
 
 def main():
-    courses = get_courses()
-    messages = []
+    seen = load_seen()
+    new_msgs = []
 
-    for course in courses:
-        quizzes = get_quizzes(course["id"])
-        for quiz in quizzes:
-            if quiz.get("published"):
-                messages.append(
+    for course in get_courses():
+        for quiz in get_quizzes(course["id"]):
+            quiz_id = quiz.get("id")
+            if quiz.get("published") and quiz_id not in seen:
+                seen.add(quiz_id)
+                new_msgs.append(
                     f"📢 New Canvas quiz\n"
                     f"Course: {course['name']}\n"
                     f"Quiz: {quiz['title']}"
                 )
 
-    if messages:
-        send_telegram("\n\n".join(messages))
-        sys.exit("New Canvas quiz detected")
+    if new_msgs:
+        send_telegram("\n\n".join(new_msgs))
+        print("New quiz notification sent")
+
+    save_seen(seen)
 
 if __name__ == "__main__":
     main()
