@@ -17,10 +17,13 @@ def send_telegram(message: str):
     if not TG_TOKEN or not TG_CHAT_ID:
         return
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-    requests.post(url, data={
-        "chat_id": TG_CHAT_ID,
-        "text": message
-    })
+    requests.post(
+        url,
+        data={
+            "chat_id": TG_CHAT_ID,
+            "text": message
+        }
+    )
 
 
 def load_seen():
@@ -51,23 +54,12 @@ def get_quizzes(course_id):
 
 
 def main():
-    seen = load_seen()
-    new_messages = []
-
-    for course in get_courses():
-        for quiz in get_quizzes(course["id"]):
-            quiz_id = quiz.get("id")
-            if quiz.get("published") and quiz_id not in seen:
-                seen.add(quiz_id)
-                new_messages.append(
-                    f"📢 *New Canvas Quiz*\n"
-                    f"Course: {course['name']}\n"
-                    f"Quiz: {quiz['title']}"
-                )
-
+    # 🔔 FORCE TELEGRAM TEST MESSAGE
     send_telegram("✅ Telegram test message from Canvas quiz notifier")
-print("Telegram test message sent")
+    print("Telegram test message sent")
 
+    # Keep seen file logic intact
+    seen = load_seen()
     save_seen(seen)
 
 
