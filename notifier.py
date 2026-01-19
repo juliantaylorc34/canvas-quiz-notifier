@@ -65,9 +65,8 @@ def main():
                     f"Quiz: {quiz['title']}"
                 )
 
-    if new_messages:
-        send_telegram("\n\n".join(new_messages))
-        print("Telegram notification sent")
+    send_telegram("✅ Telegram test message from Canvas quiz notifier")
+print("Telegram test message sent")
 
     save_seen(seen)
 
