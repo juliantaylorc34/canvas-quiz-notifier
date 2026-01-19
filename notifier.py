@@ -1,5 +1,6 @@
 import requests
 import os
+import sys
 
 BASE_URL = os.getenv("CANVAS_BASE_URL")
 TOKEN = os.getenv("CANVAS_TOKEN")
@@ -12,24 +13,29 @@ def get_courses():
     return r.json()
 
 def get_quizzes(course_id):
-    url = f"{BASE_URL}/api/v1/courses/{course_id}/quizzes"
-    r = requests.get(url, headers=HEADERS)
-
+    r = requests.get(
+        f"{BASE_URL}/api/v1/courses/{course_id}/quizzes",
+        headers=HEADERS
+    )
     if r.status_code == 404:
-        # Course has no quizzes or quizzes are not accessible
         return []
-
     r.raise_for_status()
     return r.json()
 
 def main():
-    courses = get_courses()
+    found_new_quiz = False
 
+    courses = get_courses()
     for course in courses:
         quizzes = get_quizzes(course["id"])
         for quiz in quizzes:
             if quiz.get("published"):
-                print(f"Quiz available: {course['name']} — {quiz['title']}")
+                print(f"NEW QUIZ: {course['name']} — {quiz['title']}")
+                found_new_quiz = True
+
+    if found_new_quiz:
+        # Force GitHub Actions to send an email
+        sys.exit("New Canvas quiz detected")
 
 if __name__ == "__main__":
     main()
